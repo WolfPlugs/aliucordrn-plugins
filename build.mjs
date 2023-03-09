@@ -19,8 +19,9 @@ if (plugin === "--watch") {
 }
 
 check(!!plugin, `Usage: ${argv.join(" ")} <PLUGIN>`);
-
-const path = join(plugin, "index.ts");
+const files = ["index.ts", "index.tsx"];
+const file = files.find(file => existsSync(join(plugin, file)));
+const path = join(plugin, file);
 check(existsSync(path), `No such file: ${path}`);
 
 const proc = spawnSync((platform === "win32") ? ".\\node_modules\\.bin\\rollup.cmd" : "node_modules/.bin/rollup", ["-c", "--configPlugin", "typescript", watch && "--watch"].filter(Boolean), {
