@@ -47,9 +47,8 @@ const REFRESH_INTERVAL = 1000 * 60 * 30;
 
 export default class GlobalBadges extends Plugin {
     public async start() {
-        console.log('lol');
 
-        const ProfileBadges = getByName("ProfileBadges", { default: false });
+        let profileBadges = getByName("ProfileBadges", { default: false });
 
         const styles = Styles.createThemedStyleSheet({
             container: {
@@ -66,142 +65,126 @@ export default class GlobalBadges extends Plugin {
             }
         });
 
-        after(ProfileBadges, "default", (ctx) => {
+        after(profileBadges, "default", (ctx) => {
             const [, forceUpdate] = React.useReducer(x => x = !x, false);
 
-            const user = ctx.args[0]?.user;
-            if (!user) return;
+            const user = ctx.args[0]?.user
+            if (user === undefined) return;
 
-            const badges = cache.get(user.id);
-            if (!badges || Date.now() - badges.lastFetch > REFRESH_INTERVAL) {
-                fetch(`https://api.obamabot.me/v2/text/badges?user=${user.id}`)
-                    .then(res => res.json())
-                    .then((data: CustomBadges) => {
-                        cache.set(user.id, {
-                            badges: data,
-                            lastFetch: Date.now()
+            const cachUser = cache.get(user.id);
+            if (cachUser === undefined) {
+                fetchBadges(user.id, forceUpdate);
+                return
+            };
+
+            const { customBadgesArray, bd, enmity, goosemod } = cachUser?.badges;
+            const customBadgesViewable = (
+                <View key="gb-custom" style={styles.container}>
+                    <TouchableOpacity key={customBadgesArray.badge} onPress={() => {
+                        Toasts.open({
+                            content: customBadgesArray.name,
+                            source: { uri: customBadgesArray.badge }
                         });
-                        forceUpdate();
-                    });
+                    }}>
+                        <Image style={styles.img} source={{ uri: customBadgesArray.badge }} />
+                    </TouchableOpacity>
+                </View>
+            )
+
+            const bdViewable = (
+                <View key="gb-bd" style={styles.container}>
+                    <TouchableOpacity key="bd-dev" onPress={() => {
+                        Toasts.open({
+                            content: "BetterDiscord Developer",
+                            source: { uri: Badges.bdDevs }
+                        });
+                    }}>
+                        <Image style={styles.img} source={{ uri: Badges.bdDevs }} />
+                    </TouchableOpacity>
+                </View>
+            )
+            let enmityViewable;
+            if (enmity.supporter) {
+                enmityViewable = (
+                    <View key="gb-enmity" style={styles.container}>
+                        <TouchableOpacity key="enmity-supporter" onPress={() => {
+                            Toasts.open({
+                                content: "Enmity Supporter",
+                                source: { uri: enmity.supporter.data.url.dark }
+                            });
+                        }}>
+                            <Image style={styles.img} source={{ uri: enmity.supporter.data.url.dark }} />
+                        </TouchableOpacity>
+                    </View>
+                )
             }
 
-            const { customBadgesArray, bd, enmity, goosemod } = badges?.badges || {};
-
-            const customBadges = customBadgesArray?.map(badge => (
-                <View key={badge.name} style={styles.container}>
-                    <TouchableOpacity key={badge.url} onPress={() => { 
-                        Toasts.open({
-                            content: badge.name,
-                            source: { uri: badge.url },
-                        });
-                    }}>
-                        <Image source={{ uri: badge.url }} style={styles.img} />
-                    </TouchableOpacity>
-                </View>
-            ));
-
-            const bdBadges = bd?.dev && (
-                <View style={styles.container}>
-                    <TouchableOpacity onPress={() => {
-                        Toasts.open({
-                            content: "BD Dev",
-                            source: { uri: Badges.bdDevs },
-                        });
-                    }}>
-                        <Image source={{ uri: Badges.bdDevs }} style={styles.img} />
-                    </TouchableOpacity>
-                </View>
-            );
-
-            const enmityBadges = enmity?.supporter?.data && (
-                <View style={styles.container}>
-                    <TouchableOpacity onPress={() => {
-                        Toasts.open({
-                            content: "Enmity Supporter",
-                            source: { uri: enmity.supporter.data.url.dark },
-                        });
-                    }}>
-                        <Image source={{ uri: enmity.supporter.data.url.dark }} style={styles.img} />
-                    </TouchableOpacity>
-                </View>
-            );
-
-            const goosemodBadges = goosemod?.sponsor && (
-                <View style={styles.container}>
-                    <TouchableOpacity onPress={() => {
+            const goosemodSponsorViewable = (
+                <View key="gb-goosemodsponsor" style={styles.container}>
+                    <TouchableOpacity key="goosemod-sponsor" onPress={() => {
                         Toasts.open({
                             content: "GooseMod Sponsor",
-                            source: { uri: 'https://goosemod.com/img/goose_globe.png' },
+                            source: { uri: 'https://goosemod.com/img/goose_globe.png' }
                         });
                     }}>
-                        <Image source={{ uri: 'https://goosemod.com/img/goose_globe.png' }} style={styles.img} />
+                        <Image style={styles.img} source={{ uri: 'https://goosemod.com/img/goose_globe.png' }} />
                     </TouchableOpacity>
                 </View>
-            );
-
-            const goosemodBadges2 = goosemod?.dev && (
-                <View style={styles.container}>
-                    <TouchableOpacity onPress={() => {
+            )
+            const goosemodDevViewable = (
+                <View key="gb-goosemoddev" style={styles.container}>
+                    <TouchableOpacity key="goosemod-dev" onPress={() => {
                         Toasts.open({
-                            content: "GooseMod Dev",
-                            source: { uri: 'https://goosemod.com/img/goose_glitch.jpg' },
+                            content: "GooseMod Developer",
+                            source: { uri: 'https://goosemod.com/img/goose_glitch.jpg' }
                         });
                     }}>
-                        <Image source={{ uri: 'https://goosemod.com/img/goose_glitch.jpg' }} style={styles.img} />
+                        <Image style={styles.img} source={{ uri: 'https://goosemod.com/img/goose_glitch.jpg' }} />
                     </TouchableOpacity>
                 </View>
-            );
+            )
 
-            const goosemodBadges3 = goosemod?.translator && (
-                <View style={styles.container}>
-                    <TouchableOpacity onPress={() => {
+            const goosemodTranslatorViewable = (
+                <View key="gb-goosemodtranslator" style={styles.container}>
+                    <TouchableOpacity key="goosemod-translator" onPress={() => {
                         Toasts.open({
                             content: "GooseMod Translator",
-                            source: { uri: 'https://goosemod.com/img/goose_globe.png' },
+                            source: { uri: 'https://goosemod.com/img/goose_globe.png' }
                         });
                     }}>
-                        <Image source={{ uri: 'https://goosemod.com/img/goose_globe.png' }} style={styles.img} />
+                        <Image style={styles.img} source={{ uri: 'https://goosemod.com/img/goose_globe.png' }} />
                     </TouchableOpacity>
                 </View>
-            );
+            )
 
-            if (!ctx.result) {
-                // loop through all the badges and add them to the array
-                const thedangbadges = [
-                    customBadges,
-                    bdBadges,
-                    enmityBadges,
-                    goosemodBadges,
-                    goosemodBadges2,
-                    goosemodBadges3
-                ];
+            if (!ctx.result) return customBadgesViewable;
 
-                // loop through the array and add the badges to the result
-                for (let i = 0; i < thedangbadges.length; i++) {
-                    if (thedangbadges[i]) {
-                        // dont use ctx.result because it will be undefined just return the badges itself 
-                        return thedangbadges[i];
-                    }
-                }
+            if (customBadgesArray.badge) ctx.result.props.children.push(customBadgesViewable);
+            if (bd.dev) ctx.result.props.children.push(bdViewable);
+            if (enmity) ctx.result.props.children.push(enmityViewable);
+            if (goosemod.sponsor) ctx.result.props.children.push(goosemodSponsorViewable);
+            if (goosemod.dev) ctx.result.props.children.push(goosemodDevViewable);
+            if (goosemod.translator) ctx.result.props.children.push(goosemodTranslatorViewable);
 
-            }
-
-            // use ctx.result.props.children.push() to add the badges to the result and use loops n stuff
-            const thedangbadges = [
-                customBadges,
-                bdBadges,
-                enmityBadges,
-                goosemodBadges,
-                goosemodBadges2,
-                goosemodBadges3
-            ];
-
-            for (let i = 0; i < thedangbadges.length; i++) {
-                if (thedangbadges[i]) {
-                    ctx.result.props.children.push(thedangbadges[i]);
-                }
-            }
-            return
         });
+
     }
+}
+
+
+
+async function fetchBadges(userID: string, updateForce: Function) {
+    if (!cache.has(userID) || cache.get(userID)!.lastFetch + REFRESH_INTERVAL < Date.now()) {
+        const res = await fetch(`https://api.obamabot.me/v2/text/badges?user=${userID}`);
+        const body = (await res.json()) as CustomBadges;
+        const result: BadgeCache =
+            res.status === 200 || res.status === 404
+                ? { badges: body || {}, lastFetch: Date.now() }
+                : (cache.delete(userID), { badges: body, lastFetch: Date.now() });
+
+        cache.set(userID, result);
+
+        updateForce();
+    }
+    return cache.get(userID)!.badges;
 }
