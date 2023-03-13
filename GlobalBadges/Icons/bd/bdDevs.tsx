@@ -1,7 +1,8 @@
-import { React } from "aliucord/metro";
+import { getByProps } from 'aliucord/metro';
+const { SvgXml } = getByProps("Circle", "Rect", "Shape")
 
-export default React.memo((props) => (
-  <svg viewBox="0 0 2000 2000" {...props}>
+const bdDevsSvg = `
+  <svg viewBox="0 0 2000 2000">
     <g>
       <path
         fill="#3E82E5"
@@ -13,4 +14,6 @@ export default React.memo((props) => (
       />
     </g>
   </svg>
-));
+`;
+
+export default () => <SvgXml height={24} width={24} xml={bdDevsSvg} />
